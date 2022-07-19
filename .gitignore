@@ -1,3 +1,10 @@
+# Project specific
+data/
+*.npz
+workspace.code-workspace
+*.png
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
