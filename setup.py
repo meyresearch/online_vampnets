@@ -25,10 +25,6 @@ setuptools.setup(
         "tables",
         "matplotlib"
     ],
-    entry_points={
-        'console_scripts': [
-            'celer = celerity.main:cli',
-        ],
-    },
+
     python_requires=">=3.8",
 )
