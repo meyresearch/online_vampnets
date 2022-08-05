@@ -123,18 +123,46 @@ class Dihedrals(FeaturizerMixin):
         return vals
 
 
-# class Contacts(object):
-#     def __init__(self, residues_ix: List[int], scheme: str = 'ca'):
-#         if len(residues_ix) > 0:
-#             contacts_ix = np.array(list(combinations(residues_ix, 2)))
-#         else:
-#             contacts_ix = "all"
-#         self.contacts_ix = contacts_ix
-#         self.scheme = scheme
-#
-#     def __call__(self, frame: mdtraj.Trajectory):
-#         vals, contacts_ix = mdtraj.compute_contacts(frame, contacts=self.contacts_ix, scheme=self.scheme)
-#         return vals
+class Contacts(FeaturizerMixin):
+    DEFAULT = Adict(
+        residues_ix=None,
+        contacts_ix=None,
+        periodic=True,
+        scheme=None,
+        topology_path='topology.h5', 
+        offset = 2 
+    )
+
+    def __init__(self, options):
+        self.options = self.get_options(options)
+        self.options.contacts_ix = self.get_contacts_ix()
+        self.features, self.labels = self.get_features_labels()
+
+    def get_features_labels(self):
+        features = ['contacts']*len(self.options.contacts_ix)
+        labels = [f"{x}-{y}" for x, y in zip(self.options.contacts_ix[:, 0], self.options.contacts_ix[:, 1])]
+        return features, labels
+
+    def __repr__(self): 
+        return f"{self.options}"
+
+
+    def get_contacts_ix(self) -> Union[np.ndarray, str]:
+        residues_ix = self.options.residues_ix
+        if residues_ix is None:
+            top = md.load(self.options.topology_path).top
+            residues_ix = [x.index for x in top.residues]
+
+        contacts_ix = np.array([x for x in combinations(residues_ix, 2) if x[1] > x[0] + self.options.offset])
+
+        return contacts_ix
+
+    def __call__(self, frame: md.Trajectory):
+        contacts = self.options.contacts_ix
+        scheme = self.options.scheme
+        vals, contacts_ix = md.compute_contacts(frame, contacts=contacts, scheme=scheme)
+        return vals
+
 
 # class Positions(object):
 #     def __init__(self, reference_path: str = None, which_pattern: str = None, which_ix: np.ndarray = None,
