@@ -15,7 +15,6 @@ from itertools import combinations
 
 
 from abc import ABC, abstractmethod
-from foam._version import __version__
 
 
 class FeaturizerMixin(ABC):
@@ -35,7 +34,7 @@ class FeaturizerMixin(ABC):
             options = {}
         combined_options = Adict(cls.get_default_options())
         combined_options.update(Adict(options))
-        combined_options.version = __version__
+        # combined_options.version = __version__
         combined_options.feature = cls.__name__
         return combined_options
 
@@ -76,20 +75,16 @@ class Dihedrals(FeaturizerMixin):
 
     def get_features_labels(self):
         if self.options.cossin:
-            features = list(np.repeat(['cos(dihedral(.))', 'sin(dihedral(.))'], self.n_features/2))
+            features = list(np.repeat(['cos-dihedral', 'sin-dihedral'], self.n_features/2))
             labels = np.tile(self.dihedral_ixs, (2, 1))
         else:
-            features = list(np.repeat(['dihedral(.)'], self.n_features))
+            features = list(np.repeat(['dihedral'], self.n_features))
             labels = self.dihedral_ixs
         labels = ["{}-{}-{}-{}".format(*label) for label in labels]
         return features, labels
 
     def __repr__(self):
-        col1, col2 = 'feature', 'dihedral_ixs'
-        str = f"{self.options}\n\n"
-        str += f"| {col1:19} | {col2:25} |\n"
-        for feat, lab in zip(self.features, self.labels):
-            str += f"| {feat:19} | {lab:25} |\n"
+        str = f"{self.options}"
         return str
 
     def get_indices(self) -> np.ndarray:

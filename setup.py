@@ -23,7 +23,8 @@ setuptools.setup(
         "pretty-errors",
         "pandas",
         "tables",
-        "matplotlib"
+        "matplotlib",
+        "pydash"
     ],
 
     python_requires=">=3.8",

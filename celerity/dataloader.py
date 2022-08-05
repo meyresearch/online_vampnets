@@ -64,7 +64,7 @@ class StreamingTrajectory():
         with h5py.File(self.trajectory_paths[i_traj], 'r') as f: 
             return f['coordinates'].shape[0]
     
-    def get_frame_traj(self, i_frame_traj: Tuple[int, int]) -> mdtraj.trajectory: 
+    def get_frame_traj(self, i_frame_traj: Tuple[int, int]) -> mdtraj.Trajectory: 
         return mdtraj.load_frame(self.trajectory_paths[i_frame_traj[1]], index=i_frame_traj[0])
 
     def __len__(self):
@@ -84,7 +84,7 @@ class StreamingTrajectory():
         with h5py.File(self.trajectory_paths[i_traj], 'r') as f: 
             return f['coordinates'].shape[0]
     
-    def get_frame_traj(self, i_frame_traj: Tuple[int, int]) -> mdtraj.trajectory: 
+    def get_frame_traj(self, i_frame_traj: Tuple[int, int]) -> mdtraj.Trajectory: 
         return mdtraj.load_frame(self.trajectory_paths[i_frame_traj[1]], index=i_frame_traj[0])
 
 
@@ -293,7 +293,7 @@ class LoaderMixin(ABC):
             options = {}
         combined_options = Adict(cls.get_default_options())
         combined_options.update(Adict(options))
-        # combined_options.version = __version__
+        combined_options.version = ''
         combined_options.feature = cls.__name__
         return combined_options
 
@@ -328,22 +328,15 @@ class DataLoader(torch.utils.data.DataLoader, LoaderMixin):
     def __init__(self, options: Dict[str, Any]) -> None:
         self.options = self.get_options(options)
         # parse output options
-        if self.options.output == 'numpy':
 
-            def f(batch): 
-                return collate_to_numpy(batch, self.options.transform)
+        def f(batch): 
+            return collate_mdtraj(batch, self.options.transform, self.options.output)
 
-            self.options.collate_fn = f 
-        elif self.options.output == 'tensor':
-
-            def f(batch): 
-                return collate_to_tensor(batch, self.options.transform)
-
-            self.options.collate_fn = f  # default behaviour
+        self.options.collate_fn = f 
 
         # Setup args, kwargs for pytorch
         kwargs = pyd.clone(self.options)
-        for opt in ['output', 'version', 'feature']:
+        for opt in ['output', 'version', 'feature', 'transform']:
             _ = kwargs.pop(opt)
         dataset = kwargs.pop('dataset')
 
