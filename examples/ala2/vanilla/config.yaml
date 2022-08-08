@@ -1,0 +1,15 @@
+work_dir: '.'
+data:
+  lag_time: 1
+  validation_split: 0.3
+training:   
+  learning_rate: 5e-4
+  n_epochs: 30
+  optimizer: adam
+score: 
+  method: vamp2
+  mode: regularize
+  epsilon: 1e-6
+model:
+  path: model.pt 
+  
