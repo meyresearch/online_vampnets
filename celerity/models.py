@@ -1,11 +1,35 @@
+from abc import abstractmethod, ABC
+from typing import Dict
 import torch
 import torch.nn as nn
 from addict import Dict as Adict
 from deeptime.decomposition.deep import vampnet_loss
 
 
+class ConfigMixin(ABC):
 
-class VAMPnet(nn.Module):
+    DEFAULT = Adict()
+
+    # @abstractmethod
+    # def __init__(self, options={}):
+    #     self.options = self.get_options(options)
+    #     pass
+
+    @classmethod
+    def get_options(cls, options={}):
+        combined_options = Adict(cls.get_default_options())
+        combined_options.update(Adict(options))
+        # combined_options.version = __version__
+        combined_options.runner = cls.__name__
+        return combined_options
+
+    @classmethod
+    def get_default_options(cls) -> Dict:
+        return Adict(cls.DEFAULT)
+
+
+
+class VAMPnetEstimator(nn.Module, ConfigMixin):
     DEFAULT = Adict(
         lag_time = 1, 
         network_dimensions = [], 
@@ -21,7 +45,7 @@ class VAMPnet(nn.Module):
         device="cpu"
     ) 
     def __init__(self, options): 
-        super(VAMPnet, self).__init__()
+        super(VAMPnetEstimator, self).__init__()
         self.options = self.get_options(options)
 
         self.t_0 = self.create_lobe()
@@ -50,21 +74,6 @@ class VAMPnet(nn.Module):
         lobe.append(nn.Softmax(dim=1))
         return lobe
 
-
-
-    @classmethod
-    def get_options(cls, options=None):
-        if options is None:
-            options = {}
-        combined_options = Adict(cls.get_default_options())
-        combined_options.update(Adict(options))
-        # combined_options.version = __version__
-        combined_options.feature = cls.__name__
-        return combined_options
-
-    @classmethod
-    def get_default_options(cls):
-        return Adict(cls.DEFAULT)
 
     def forward(self, x):
         x_0 = self.t_0(x[0])
@@ -111,5 +120,56 @@ class VAMPnet(nn.Module):
         self.dict_scores['validate']['loss'][self.step] = -mean_score
 
      
+class VAMPNetModel(nn.Module, ConfigMixin):
+    DEFAULT = Adict(
+        estimator = None, 
+        device = 'cpu'
+    )
+    def __init__(self, options):
+        super(VAMPNetModel, self).__init__()
+        self.options = self.get_options(options)
+        self.device = torch.device(self.options.device)
+        self.net = self.option.estimator.t_0
+        self.to(self.device)
+
+    def transform(self, data_loader):
+        self.eval()
+        with torch.no_grad():
+            out = []
+            for batch in data_loader:
+                batch = batch.to(self.device)
+                out.append(self.net(batch).detach().cpu().numpy())
+        return out
 
 
+
+
+class MSMEstimator(object, ConfigMixin): 
+    DEFAULT = Adict(
+        lag_time = 1, 
+        n_states = 100, 
+        clustering = 'kmean', 
+        score = Adict(
+              method='VAMP2', 
+              mode='regularize', 
+              epsilon=1e-6
+        ), 
+        loss = vampnet_loss, 
+        device="cpu"
+    ) 
+    def __init__(self, options): 
+        self.options = self.get_options(options)
+
+    @classmethod
+    def get_options(cls, options=None):
+        if options is None:
+            options = {}
+        combined_options = Adict(cls.get_default_options())
+        combined_options.update(Adict(options))
+        # combined_options.version = __version__
+        combined_options.feature = cls.__name__
+        return combined_options
+
+    @classmethod
+    def get_default_options(cls):
+        return Adict(cls.DEFAULT)
