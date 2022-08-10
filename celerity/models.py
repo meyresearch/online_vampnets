@@ -138,14 +138,15 @@ class VAMPNetModel(nn.Module, ConfigMixin):
         super(VAMPNetModel, self).__init__()
         self.options = self.get_options(options)
         self.device = torch.device(self.options.device)
-        self.net = self.option.estimator.t_0
+        self.net = self.options.estimator.t_0
         self.to(self.device)
 
     def transform(self, data_loader):
+        n_batches = len(data_loader)
         self.eval()
         with torch.no_grad():
             out = []
-            for batch in data_loader:
+            for batch in tqdm(data_loader, desc='Transform', total=n_batches):
                 batch = batch.to(self.device)
                 out.append(self.net(batch).detach().cpu().numpy())
         return out
