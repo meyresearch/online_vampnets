@@ -4,6 +4,39 @@ import torch
 import torch.nn as nn
 from addict import Dict as Adict
 from deeptime.decomposition.deep import vampnet_loss
+from tqdm import tqdm_notebook as tqdm 
+
+
+class LossLogger(object):
+    """Callback to write out into tensorboard
+
+    Parameters
+    ----------
+    tb_writer : tensorboard.Writer
+        The tensorboard writer.
+    data_set: str, either 'train' or 'valid'.
+        If it is the training/validation set.
+    """
+    def __init__(self, tb_writer, data_set) -> None:
+        super().__init__()
+        self.writer = tb_writer
+        self.data_set = data_set
+
+    def __call__(self, step: int, dict: Dict) -> None:
+        """Update the tensorboard with the recorded scores from step
+
+        Parameters
+        ----------
+        step : int
+            The training step number.
+        dict : Dict
+            The dictionary containing the information to write out.
+        """
+        for scoring_method, items in dict[self.data_set].items():
+            if step in items.keys():
+                self.writer.add_scalars(scoring_method, {self.data_set: items[step]}, step)
+
+
 
 
 class ConfigMixin(ABC):
@@ -81,16 +114,17 @@ class VAMPnetEstimator(nn.Module, ConfigMixin):
         return (x_0, x_t)
 
 
-    def fit(self, train_loader, validate_loader): 
+    def fit(self, train_loader, validate_loader, train_callbacks=None, validate_callbacks=None): 
         self.optimizer.zero_grad()
-        for epoch_ix in range(self.options.n_epochs): 
+        n_batches = len(train_loader)
+        for epoch_ix in tqdm(range(self.options.n_epochs), desc='Epoch', total=self.options.n_epochs): 
             self.train()
-            for batch in train_loader: 
-                self.train_batch(batch)
+            for batch in tqdm(train_loader, desc='Batch', total=n_batches): 
+                self.train_batch(batch, train_callbacks)
 
             self.eval()
             if validate_loader is not None: 
-                self.validate(validate_loader)
+                self.validate(validate_loader, validate_callbacks)
 
     def score_batch(self, x):
         x0, xt = x[0].to(self.device), x[1].to(self.device)
@@ -98,7 +132,7 @@ class VAMPnetEstimator(nn.Module, ConfigMixin):
         loss = self.options.loss(output[0], output[1], **self.options.score)
         return loss
 
-    def train_batch(self,x): 
+    def train_batch(self,x, callbacks): 
         self.optimizer.zero_grad()
         loss = self.score_batch(x)
         loss.backward()
@@ -107,8 +141,12 @@ class VAMPnetEstimator(nn.Module, ConfigMixin):
         self.dict_scores['train'][self.options.score.method][self.step] = -loss_value
         self.dict_scores['train']['loss'][self.step] = loss_value
         self.step +=1 
+        if callbacks is not None:
+            for callback in callbacks: 
+                callback(self.step, self.dict_scores)
 
-    def validate(self, data_loader): 
+
+    def validate(self, data_loader, callbacks): 
         losses = []
         for i, batch in enumerate(data_loader):
             with torch.no_grad():
@@ -118,7 +156,9 @@ class VAMPnetEstimator(nn.Module, ConfigMixin):
 
         self.dict_scores['validate'][self.options.score.method][self.step] = mean_score
         self.dict_scores['validate']['loss'][self.step] = -mean_score
-
+        if callbacks is not None:
+            for callback in callbacks: 
+                callback(self.step, self.dict_scores)
      
 class VAMPNetModel(nn.Module, ConfigMixin):
     DEFAULT = Adict(
@@ -144,7 +184,7 @@ class VAMPNetModel(nn.Module, ConfigMixin):
 
 
 
-class MSMEstimator(object, ConfigMixin): 
+class MSMEstimator(ConfigMixin): 
     DEFAULT = Adict(
         lag_time = 1, 
         n_states = 100, 
@@ -157,19 +197,3 @@ class MSMEstimator(object, ConfigMixin):
         loss = vampnet_loss, 
         device="cpu"
     ) 
-    def __init__(self, options): 
-        self.options = self.get_options(options)
-
-    @classmethod
-    def get_options(cls, options=None):
-        if options is None:
-            options = {}
-        combined_options = Adict(cls.get_default_options())
-        combined_options.update(Adict(options))
-        # combined_options.version = __version__
-        combined_options.feature = cls.__name__
-        return combined_options
-
-    @classmethod
-    def get_default_options(cls):
-        return Adict(cls.DEFAULT)

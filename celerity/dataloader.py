@@ -67,26 +67,6 @@ class StreamingTrajectory():
     def get_frame_traj(self, i_frame_traj: Tuple[int, int]) -> mdtraj.Trajectory: 
         return mdtraj.load_frame(self.trajectory_paths[i_frame_traj[1]], index=i_frame_traj[0])
 
-    def __len__(self):
-        pass
-
-    @abstractmethod
-    def __getitem__(self):
-        pass
-
-
-class StreamingTrajectory():
-    def __init__(self, options):
-        
-        self.trajectory_paths = options['trajectories']
-
-    def get_n_frame(self, i_traj: int) -> int:
-        with h5py.File(self.trajectory_paths[i_traj], 'r') as f: 
-            return f['coordinates'].shape[0]
-    
-    def get_frame_traj(self, i_frame_traj: Tuple[int, int]) -> mdtraj.Trajectory: 
-        return mdtraj.load_frame(self.trajectory_paths[i_frame_traj[1]], index=i_frame_traj[0])
-
 
 
 class TrajectoryDataset(Dataset, MappableDatasetMixin):
@@ -127,7 +107,7 @@ class TrajectoryDataset(Dataset, MappableDatasetMixin):
         available_frames = []
         for i in range(len(self.traj_paths)):
             if self.in_memory:
-                n_frames = self.trajs[i].shape[0]
+                n_frames = self.trajs[i].n_frames
                 available_frames.append(n_frames)
             else:
                 n_frames = self.trajectory_stream.get_n_frame(i)
@@ -205,7 +185,7 @@ class TimeLaggedDataset(Dataset, MappableDatasetMixin):
         available_frames = []
         for i in range(len(self.traj_paths)):
             if self.in_memory:
-                n_frames = self.trajs[i].shape[0]
+                n_frames = self.trajs[i].n_frames
                 available_frames.append(n_frames - self.lag_time)
             else:
                 n_frames = self.trajectory_stream.get_n_frame(i)
@@ -255,10 +235,9 @@ def istensor(elem: List[Any]) -> bool:
 def collate_mdtraj(batch: List[Any], md_transform: Callable[[mdtraj.Trajectory], np.ndarray], output: str = 'numpy') -> Union[Tuple[np.ndarray], np.ndarray]:
     if output == 'tensor':
         def transform(x):
-            torch.Tensor(md_transform(x))
+            return torch.Tensor(md_transform(x))
     elif output == 'numpy': 
         transform = md_transform
-
 
     # Batch will have length 'batch_size'
     elem = batch[0]
