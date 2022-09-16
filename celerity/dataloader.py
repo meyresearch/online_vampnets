@@ -55,24 +55,24 @@ class MappableDatasetMixin(ABC):
         pass
 
 
-class StreamingTrajectory():
-    def __init__(self, options):
-        
-        self.trajectory_paths = options['trajectories']
-
-    def get_n_frame(self, i_traj: int) -> int:
-        with h5py.File(self.trajectory_paths[i_traj], 'r') as f: 
-            return f['coordinates'].shape[0]
-    
-    def get_frame_traj(self, i_frame_traj: Tuple[int, int]) -> mdtraj.Trajectory: 
-        return mdtraj.load_frame(self.trajectory_paths[i_frame_traj[1]], index=i_frame_traj[0])
-
-    def __len__(self):
-        pass
-
-    @abstractmethod
-    def __getitem__(self):
-        pass
+# class StreamingTrajectory():
+#     def __init__(self, options):
+#
+#         self.trajectory_paths = options['trajectories']
+#
+#     def get_n_frame(self, i_traj: int) -> int:
+#         with h5py.File(self.trajectory_paths[i_traj], 'r') as f:
+#             return f['coordinates'].shape[0]
+#
+#     def get_frame_traj(self, i_frame_traj: Tuple[int, int]) -> mdtraj.Trajectory:
+#         return mdtraj.load_frame(self.trajectory_paths[i_frame_traj[1]], index=i_frame_traj[0])
+#
+#     def __len__(self):
+#         pass
+#
+#     @abstractmethod
+#     def __getitem__(self):
+#         pass
 
 
 class StreamingTrajectory():
