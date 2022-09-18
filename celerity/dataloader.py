@@ -55,6 +55,7 @@ class MappableDatasetMixin(ABC):
         pass
 
 
+<<<<<<< HEAD
 # class StreamingTrajectory():
 #     def __init__(self, options):
 #
@@ -75,6 +76,8 @@ class MappableDatasetMixin(ABC):
 #         pass
 
 
+=======
+>>>>>>> f21080441e0b7598d17f09616eb7e2e1e229e862
 class StreamingTrajectory():
     def __init__(self, options):
         
@@ -127,7 +130,7 @@ class TrajectoryDataset(Dataset, MappableDatasetMixin):
         available_frames = []
         for i in range(len(self.traj_paths)):
             if self.in_memory:
-                n_frames = self.trajs[i].shape[0]
+                n_frames = self.trajs[i].n_frames
                 available_frames.append(n_frames)
             else:
                 n_frames = self.trajectory_stream.get_n_frame(i)
@@ -205,7 +208,7 @@ class TimeLaggedDataset(Dataset, MappableDatasetMixin):
         available_frames = []
         for i in range(len(self.traj_paths)):
             if self.in_memory:
-                n_frames = self.trajs[i].shape[0]
+                n_frames = self.trajs[i].n_frames
                 available_frames.append(n_frames - self.lag_time)
             else:
                 n_frames = self.trajectory_stream.get_n_frame(i)
@@ -255,10 +258,9 @@ def istensor(elem: List[Any]) -> bool:
 def collate_mdtraj(batch: List[Any], md_transform: Callable[[mdtraj.Trajectory], np.ndarray], output: str = 'numpy') -> Union[Tuple[np.ndarray], np.ndarray]:
     if output == 'tensor':
         def transform(x):
-            torch.Tensor(md_transform(x))
+            return torch.Tensor(md_transform(x))
     elif output == 'numpy': 
         transform = md_transform
-
 
     # Batch will have length 'batch_size'
     elem = batch[0]
