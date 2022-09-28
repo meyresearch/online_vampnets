@@ -5,6 +5,8 @@ workspace.code-workspace
 *.png
 .micromamba
 ygpdv/logs
+*.db
+*.h5
 
 
 # Byte-compiled / optimized / DLL files
